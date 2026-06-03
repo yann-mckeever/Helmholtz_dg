@@ -9,3 +9,9 @@ __pycache__/
 *.pyc
 
 *:Zone.Identifier
+
+.vscode/
+
+Contexte.md
+
+outputs/

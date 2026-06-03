@@ -2,6 +2,15 @@ from dataclasses import dataclass, field
 
 @dataclass
 class MeshConfig:
+    """  
+    L1 : first dimension
+    L2 : second dimesion (for octagon this is the radius of center octagon, to be changed)
+    L3 : third dimension
+    mesh_size
+    dimension
+    """
+
+
     shape: str = "octagon"
     L1: float = 2.0
     L2: float = 0.05

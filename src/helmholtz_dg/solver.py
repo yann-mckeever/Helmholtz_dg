@@ -21,7 +21,7 @@ def solve_problem(config: HelmholtzConfig):
     domain = mesh_data[0]
 
     # 2. Build forms and function space
-    V, u, v, a, L, u_exact = build_problem(domain, config.physics)
+    V, u, v, a, L, u_exact = build_problem(domain, config)
 
     # 3. Create a Function to hold the solution
     uh = fem.Function(V)

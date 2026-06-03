@@ -1,10 +1,22 @@
+import os
 import numpy as np
 from dolfinx import io, fem
 from mpi4py import MPI
 import ufl
 
+OUTPUT_DIR="outputs"
+
+def _ensure_dir(comm):
+    """Safely create the output directory in a parallel MPI environment."""
+    if comm.rank == 0:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Block all processes until the master process has finished creating the folder
+    comm.barrier()
+
 def save_solution_to_xdmf(uh, domain, filename_base="solution"):
     """Save the complex solution as real, imaginary, AND absolute amplitude fields."""
+
+    _ensure_dir(domain.comm)
     
     uh_real = fem.Function(uh.function_space)
     uh_real.name = "Real_Part"
@@ -24,22 +36,30 @@ def save_solution_to_xdmf(uh, domain, filename_base="solution"):
     amp_expr = fem.Expression(ufl.sqrt(ufl.inner(uh, uh)), uh.function_space.element.interpolation_points)
     uh_amp.interpolate(amp_expr)
 
+    # Prepend the output directory to the filenames
+    path_real = os.path.join(OUTPUT_DIR, f"{filename_base}_real.bp")
+    path_imag = os.path.join(OUTPUT_DIR, f"{filename_base}_imag.bp")
+    path_amp  = os.path.join(OUTPUT_DIR, f"{filename_base}_amp.bp")
+
     try:
         # Save all three natively in the DG space using VTX
-        with io.VTXWriter(domain.comm, f"{filename_base}_real.bp", [uh_real], engine="BP4") as vtx:
+        with io.VTXWriter(domain.comm, path_real, [uh_real], engine="BP4") as vtx:
             vtx.write(0.0)
-        with io.VTXWriter(domain.comm, f"{filename_base}_imag.bp", [uh_imag], engine="BP4") as vtx:
+        with io.VTXWriter(domain.comm, path_imag, [uh_imag], engine="BP4") as vtx:
             vtx.write(0.0)
-        with io.VTXWriter(domain.comm, f"{filename_base}_amp.bp", [uh_amp], engine="BP4") as vtx:
+        with io.VTXWriter(domain.comm, path_amp, [uh_amp], engine="BP4") as vtx:
             vtx.write(0.0)
             
         if domain.comm.rank == 0:
-            print(f"Saved Real, Imaginary, and Amplitude to VTX (.bp) formats.")
+            print(f"Saved Real, Imaginary, and Amplitude fields to {OUTPUT_DIR}/")
     except Exception as e:
         print(f"VTXWriter failed: {e}")
 
 def save_error_to_xdmf(uh, u_exact, domain, filename_base="error"):
     """Save absolute error |uh - u_exact|."""
+
+    _ensure_dir(domain.comm)
+
     error = fem.Function(uh.function_space)
     error.name = "Absolute_Error"
 
@@ -48,11 +68,13 @@ def save_error_to_xdmf(uh, u_exact, domain, filename_base="error"):
     err_expr = fem.Expression(ufl.sqrt(ufl.inner(err_diff, err_diff)), uh.function_space.element.interpolation_points)
     error.interpolate(err_expr)
 
+    path_err = os.path.join(OUTPUT_DIR, f"{filename_base}.bp")
+
     try:
-        with io.VTXWriter(domain.comm, f"{filename_base}.bp", [error], engine="BP4") as vtx:
+        with io.VTXWriter(domain.comm, path_err, [error], engine="BP4") as vtx:
             vtx.write(0.0)
         if domain.comm.rank == 0:
-            print(f"Saved error to {filename_base}.bp (VTX format)")
+            print(f"Saved error field to {path_err}")
     except Exception as e:
         print(f"VTXWriter failed: {e}")
 
@@ -61,8 +83,11 @@ def export_animation(uh, domain, k, filename="wave_animation.bp"):
     Exports a time-domain animation natively in the DG space.
     Because it remains in DG, ParaView will render the actual discontinuities.
     """
+    _ensure_dir(domain.comm)
+    path_anim = os.path.join(OUTPUT_DIR, filename)
+
     if domain.comm.rank == 0:
-        print(f"Generating Animation Frames in {filename}...")
+        print(f"Generating Animation Frames in {path_anim}...")
 
     # Create a container to hold each frame of the video
     uh_animated = fem.Function(uh.function_space)
@@ -75,7 +100,7 @@ def export_animation(uh, domain, k, filename="wave_animation.bp"):
 
     try:
         # Open the VTX writer and inject frames one by one
-        with io.VTXWriter(domain.comm, filename, [uh_animated], engine="BP4") as vtx:
+        with io.VTXWriter(domain.comm, path_anim, [uh_animated], engine="BP4") as vtx:
             for i in range(nFrames):
                 t = i * dt
                 

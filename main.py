@@ -10,16 +10,20 @@ from helmholtz_dg.output import save_solution_to_xdmf, save_error_to_xdmf, expor
 def main():
     # --- Setup configuration ---
     cfg = HelmholtzConfig()
-    cfg.mesh.shape = "octagon"
+    cfg.mesh.shape = "rectangle"
+    #cfg.mesh.shape = "octagon"
     cfg.mesh.L1 = 2.0
     cfg.mesh.L2 = 0.05
-    cfg.mesh.mesh_size = 0.20
-    cfg.physics.k = 15.0
+    cfg.mesh.L3 = 1.0
+    cfg.mesh.mesh_size = 0.02
+    cfg.physics.k = 50.0
     cfg.physics.degree = 2
     cfg.physics.penalty_gamma_0 = 100.0
     cfg.physics.penalty_gamma_1 = complex(-0.07, 0.01)
     cfg.physics.penalty_beta_1 = 20.0
     cfg.physics.penalty_sigma = 1.0
+
+    cfg.reference.exact_solution_type = "StandingWave"
 
     # --- Solve ---
     uh, u_exact, error_L2 = solve_problem(cfg)

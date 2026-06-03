@@ -1,13 +1,14 @@
-from .config import PhysicsConfig
+from .config import HelmholtzConfig
 import ufl
 from dolfinx import fem
+from petsc4py import PETSc
 from scipy.special import hankel1
 import numpy as np
 
-def build_problem(domain, config: PhysicsConfig):
+def build_problem(domain, config: HelmholtzConfig):
     """Build the DG Helmholtz problem: spaces, forms, exact solution."""
-    degree = config.degree
-    k = config.k
+    degree = config.physics.degree
+    k = config.physics.k
 
     V = fem.functionspace(domain, ("DG", degree))
     u = ufl.TrialFunction(V)
@@ -17,18 +18,30 @@ def build_problem(domain, config: PhysicsConfig):
     h = ufl.CellDiameter(domain)          # size of the current cell
     h_avg = (h('+') + h('-')) / 2         # average size on interior facets
 
-    # Exact solution (Hankel function)
     u_exact = fem.Function(V)
-    def exact_solution(x):
-        r = np.sqrt(x[0]**2 + x[1]**2)
-        return hankel1(0, k * r)
-    u_exact.interpolate(exact_solution)
+    
+
+    if config.reference.exact_solution_type == "Hankel":
+        def exact_solution(x):
+            r = np.sqrt(x[0]**2 + x[1]**2)
+            return hankel1(0, k * r)
+        u_exact.interpolate(exact_solution)
+        f = fem.Constant(domain, PETSc.ScalarType(0.0)) # No source inside domain
+        
+    elif config.reference.exact_solution_type == "StandingWave":
+        def exact_solution(x):
+            # Smooth, non-singular real standing wave
+            return np.cos(np.pi * x[0]) * np.cos(np.pi * x[1])
+        u_exact.interpolate(exact_solution)
+        # Because -Delta(cos(pi*x)cos(pi*y)) = 2*pi^2 * u
+        # f = -Delta u - k^2 u  =>  f = (2*pi^2 - k^2) * u
+        f = (2 * np.pi**2 - k**2) * u_exact
 
     # Penalty parameters from config
-    gamma_0 = config.penalty_gamma_0
-    gamma_1 = config.penalty_gamma_1
-    beta_1  = config.penalty_beta_1
-    sigma   = config.penalty_sigma
+    gamma_0 = config.physics.penalty_gamma_0
+    gamma_1 = config.physics.penalty_gamma_1
+    beta_1  = config.physics.penalty_beta_1
+    sigma   = config.physics.penalty_sigma
 
     # ---- Interior facet terms (dS) ----
     # b_h
