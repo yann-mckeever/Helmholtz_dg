@@ -26,8 +26,8 @@ def main():
     cfg.physics.penalty_sigma = 1.0
 
     #---Solver config---
-    cfg.solver.solver_type = "direct"
-    cfg.solver.preconditioner = "mumps"  # 'ilu', 'jacobi', or 'none'
+    cfg.solver.solver_type = "gmres" #"direct" #"gmres"
+    cfg.solver.preconditioner = "custom_asm"  # 'ilu', 'jacobi', or 'none' "custom_asm"
 
     cfg.reference.exact_solution_type = "StandingWave"
 
