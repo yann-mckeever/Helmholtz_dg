@@ -23,7 +23,7 @@ class PhysicsConfig:
     k: float = 15.0
     degree: int = 2
     penalty_gamma_0: float = 100.0
-    penalty_gamma_1: complex = complex(-0.07, 0.01)   # use built-in complex
+    penalty_i_gamma_1: complex = complex(-0.07, 0.01)   # use built-in complex
     penalty_beta_1: float = 20.0
     penalty_sigma: float = 1.0
 

@@ -29,17 +29,26 @@ def build_problem(domain, config: HelmholtzConfig):
         f = fem.Constant(domain, PETSc.ScalarType(0.0)) # No source inside domain
         
     elif config.reference.exact_solution_type == "StandingWave":
+        # 1. Let UFL handle the continuous math perfectly at the quadrature points
+        x_ufl = ufl.SpatialCoordinate(domain)
+        
+        # Add + 0j to strictly force the UFL graph into a complex type for PETSc
+        u_sym = ufl.cos(ufl.pi * x_ufl[0]) * ufl.cos(ufl.pi * x_ufl[1]) + 0j
+        
+        # Exact mathematical source term
+        f = (2 * ufl.pi**2 - k**2) * u_sym
+
+        # 2. We keep the Numpy interpolation ONLY for calculating the final L2 error
         def exact_solution(x):
-            # Smooth, non-singular real standing wave
-            return np.cos(np.pi * x[0]) * np.cos(np.pi * x[1])
+            val = np.cos(np.pi * x[0]) * np.cos(np.pi * x[1])
+            return val.astype(PETSc.ScalarType)
+            
         u_exact.interpolate(exact_solution)
-        # Because -Delta(cos(pi*x)cos(pi*y)) = 2*pi^2 * u
-        # f = -Delta u - k^2 u  =>  f = (2*pi^2 - k^2) * u
-        f = (2 * np.pi**2 - k**2) * u_exact
+
 
     # Penalty parameters from config
     gamma_0 = config.physics.penalty_gamma_0
-    gamma_1 = config.physics.penalty_gamma_1
+    i_gamma_1 = config.physics.penalty_i_gamma_1
     beta_1  = config.physics.penalty_beta_1
     sigma   = config.physics.penalty_sigma
 
@@ -55,7 +64,7 @@ def build_problem(domain, config: HelmholtzConfig):
     # J_1
     du_dn = ufl.dot(ufl.grad(u), n)
     dv_dn = ufl.dot(ufl.grad(v), n)
-    a_h += 1j * gamma_1 * h_avg * ufl.inner(ufl.jump(du_dn), ufl.jump(dv_dn)) * ufl.dS
+    a_h +=  i_gamma_1 * h_avg * ufl.inner(ufl.jump(du_dn), ufl.jump(dv_dn)) * ufl.dS #No multiplication by 1j acknowledging that i_gamma_i = complex(-0.07, 0.01) 
 
     # L_1 (tangential jumps via projection)
     tang_u = ufl.grad(u) - du_dn * n
@@ -68,6 +77,8 @@ def build_problem(domain, config: HelmholtzConfig):
     # ---- Boundary terms (ds) - using h (cell diameter), not h_avg ----
     gamma_0_bnd = gamma_0   # same penalty on boundary
     a += (- ufl.inner(du_dn, v) - ufl.inner(u, dv_dn) + 1j * (gamma_0_bnd / h) * ufl.inner(u, v)) * ufl.ds
-    L = (- ufl.inner(u_exact, dv_dn) + 1j * (gamma_0_bnd / h) * ufl.inner(u_exact, v)) * ufl.ds
+
+    L = ufl.inner(f, v) * ufl.dx
+    L += (- ufl.inner(u_exact, dv_dn) + 1j * (gamma_0_bnd / h) * ufl.inner(u_exact, v)) * ufl.ds
 
     return V, u, v, a, L, u_exact
