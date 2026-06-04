@@ -10,18 +10,24 @@ from helmholtz_dg.output import save_solution_to_xdmf, save_error_to_xdmf, expor
 def main():
     # --- Setup configuration ---
     cfg = HelmholtzConfig()
+    #---Domain/Mesh config---
     cfg.mesh.shape = "rectangle"
     #cfg.mesh.shape = "octagon"
     cfg.mesh.L1 = 2.0
     cfg.mesh.L2 = 0.05
     cfg.mesh.L3 = 1.0
     cfg.mesh.mesh_size = 0.02
-    cfg.physics.k = 50.0
+    #---Physical parameters config--- (cf DOI 10.1137/080737538)
+    cfg.physics.k = 10.0
     cfg.physics.degree = 2
     cfg.physics.penalty_gamma_0 = 100.0
-    cfg.physics.penalty_gamma_1 = complex(-0.07, 0.01)
+    cfg.physics.penalty_i_gamma_1 = complex(-0.07, 0.01)
     cfg.physics.penalty_beta_1 = 20.0
     cfg.physics.penalty_sigma = 1.0
+
+    #---Solver config---
+    cfg.solver.solver_type = "direct"
+    cfg.solver.preconditioner = "mumps"  # 'ilu', 'jacobi', or 'none'
 
     cfg.reference.exact_solution_type = "StandingWave"
 
@@ -33,6 +39,7 @@ def main():
 
     # 1. Static exports
     save_solution_to_xdmf(uh, domain, "helmholtz_solution")
+    save_solution_to_xdmf(u_exact, domain, "helmholtz_exact")
     save_error_to_xdmf(uh, u_exact, domain, "helmholtz_error")
 
     # 2. Animated DG Export
