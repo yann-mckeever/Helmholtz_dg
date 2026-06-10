@@ -34,7 +34,7 @@ def solve_problem(config: HelmholtzConfig):
     A = fem.petsc.assemble_matrix(fem.form(a))
     A.assemble()
     b = fem.petsc.assemble_vector(fem.form(L))
-    b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)  # ← ADD
+    b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
     b.assemble()
     
     # 5. Configure PETSc Options
@@ -49,7 +49,7 @@ def solve_problem(config: HelmholtzConfig):
 
     elif config.solver.solver_type == "gmres":
         ksp.setType("gmres")
-        ksp.setTolerances(rtol=1e-6, atol=1e-10, max_it=1000)  # ← atol added
+        ksp.setTolerances(rtol=1e-6, atol=1e-10, max_it=1000)  
         ksp.setMonitor(lambda ksp, its, rnorm: print(f"Iteration {its}: Residual = {rnorm:.4e}"))
 
         pc = ksp.getPC()

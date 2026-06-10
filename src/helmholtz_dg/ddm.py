@@ -10,7 +10,7 @@ def build_subdomains(V, domain, config):
     L1 = config.mesh.L1
     L3 = config.mesh.L3
     mid_x = L1 / 2.0
-    mid_y = L3 / 2.0  # FIXED: Was previously L1 / 2.0
+    mid_y = L3 / 2.0 
 
     # Get the geometric midpoints of all cells in the mesh
     num_cells = domain.topology.index_map(domain.topology.dim).size_local

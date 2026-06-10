@@ -12,7 +12,6 @@ class OptimizedSchwarzPC:
         comm = self.V.mesh.comm
 
         for isub in self.subdomains:
-            # Because the cells are intact, this matrix is now perfectly invertible
             sub_mat = self.global_matrix.createSubMatrix(isub, isub)
 
             ksp = PETSc.KSP().create(comm=comm)
@@ -31,8 +30,8 @@ class OptimizedSchwarzPC:
             vec_local_rhs = x.getSubVector(isub)
             vec_local_sol = vec_local_rhs.duplicate()
             ksp.solve(vec_local_rhs, vec_local_sol)
-            x.restoreSubVector(isub, vec_local_rhs)   # ← moved before setValues
-            y.setValues(isub.array, vec_local_sol.array, PETSc.InsertMode.INSERT_VALUES)  # ← INSERT not ADD
+            x.restoreSubVector(isub, vec_local_rhs)  
+            y.setValues(isub.array, vec_local_sol.array, PETSc.InsertMode.INSERT_VALUES) 
             vec_local_sol.destroy()
         y.assemblyBegin()
         y.assemblyEnd()
