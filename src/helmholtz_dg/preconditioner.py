@@ -16,10 +16,17 @@ class OptimizedSchwarzPC:
 
             ksp = PETSc.KSP().create(comm=comm)
             ksp.setOperators(sub_mat)
-            ksp.setType("preonly")
+            """ ksp.setType("preonly")
             ksp_pc = ksp.getPC()
             ksp_pc.setType("lu")
             ksp_pc.setFactorSolverType("mumps")
+            ksp.setUp() """
+
+
+            ksp.setType("gmres")
+            ksp.setTolerances(max_it=5)
+            ksp_pc = ksp.getPC()
+            ksp_pc.setType("ilu")
             ksp.setUp()
 
             self.local_ksp_solvers.append(ksp)

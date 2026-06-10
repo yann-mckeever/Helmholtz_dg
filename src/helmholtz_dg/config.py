@@ -29,8 +29,8 @@ class PhysicsConfig:
 
 @dataclass
 class SolverConfig:
-    solver_type: str = "direct"
-    preconditioner: str = "mumps"
+    solver_type: str = "gmres"
+    preconditioner: str = "custom_asm"
     use_mumps: bool = False
 
 @dataclass

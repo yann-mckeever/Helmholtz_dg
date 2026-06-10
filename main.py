@@ -16,7 +16,7 @@ def main():
     cfg.mesh.L1 = 2.0
     cfg.mesh.L2 = 0.05
     cfg.mesh.L3 = 1.0
-    cfg.mesh.mesh_size = 0.05
+    cfg.mesh.mesh_size = 0.015
     #---Physical parameters config--- (cf DOI 10.1137/080737538)
     cfg.physics.k = 10.0
     cfg.physics.degree = 2

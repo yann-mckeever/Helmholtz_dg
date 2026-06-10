@@ -48,7 +48,7 @@ def solve_problem(config: HelmholtzConfig):
         pc.setFactorSolverType("mumps")
 
     elif config.solver.solver_type == "gmres":
-        ksp.setType("gmres")
+        ksp.setType("fgmres")
         ksp.setTolerances(rtol=1e-6, atol=1e-10, max_it=1000)  
         ksp.setMonitor(lambda ksp, its, rnorm: print(f"Iteration {its}: Residual = {rnorm:.4e}"))
 
