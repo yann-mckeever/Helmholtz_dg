@@ -10,7 +10,7 @@ from .problem import build_problem
 
 from petsc4py import PETSc
 from .ddm import build_subdomains
-from .preconditioner import OptimizedSchwarzPC
+from .preconditioner import AdditiveSchwarzPC
 
 def solve_problem(config: HelmholtzConfig):
     """
@@ -21,11 +21,12 @@ def solve_problem(config: HelmholtzConfig):
         error_L2: float – L2 error norm
     """
     # 1. Create mesh
-    mesh_data = create_mesh(config.mesh)
+    mesh_data = create_mesh(config)
     domain = mesh_data[0]
+    facet_tags = mesh_data[2]
 
     # 2. Build forms and function space
-    V, u, v, a, L, u_exact = build_problem(domain, config)
+    V, u, v, a, L, u_exact = build_problem(domain, config, facet_tags)
 
     # 3. Create a Function to hold the solution
     uh = fem.Function(V)
@@ -48,21 +49,35 @@ def solve_problem(config: HelmholtzConfig):
         pc.setFactorSolverType("mumps")
 
     elif config.solver.solver_type == "gmres":
-        ksp.setType("fgmres")
-        ksp.setTolerances(rtol=1e-6, atol=1e-10, max_it=1000)  
-        ksp.setMonitor(lambda ksp, its, rnorm: print(f"Iteration {its}: Residual = {rnorm:.4e}"))
-
+        ksp.setType("gmres")
+        ksp.setTolerances(rtol=1e-12, atol=1e-14, max_it=1000)  # Plus strict 
+        ksp.setMonitor(lambda ksp, its, rnorm: print(f"GMRES: it={its}, residual={rnorm:.2e}"))  # Suivi en temps réel
         pc = ksp.getPC()
 
         if config.solver.preconditioner == "custom_asm":
             pc.setType(PETSc.PC.Type.PYTHON)
             subdomains = build_subdomains(V, domain, config)
-            custom_pc = OptimizedSchwarzPC(V, subdomains, A)
+            custom_pc = AdditiveSchwarzPC(V, subdomains, A)
             pc.setPythonContext(custom_pc)
         else:
-            pc.setType(config.solver.preconditioner)
+            pc.setType(config.solver.preconditioner) 
+            
+        ksp.setUp()
+        
+       
 
-        ksp.setUp()  # ← moved here, last after everything is configured
+        """ if config.solver.preconditioner == "custom_asm":
+            pc.setType(PETSc.PC.Type.ASM)
+            pc.setASMOverlap(1) 
+            ksp.setUp()
+            sub_ksps = pc.getASMSubKSP()
+            for sub_ksp in sub_ksps:
+                sub_ksp.setType("preonly")
+                sub_pc = sub_ksp.getPC()
+                sub_pc.setType("lu")
+        else:
+            pc.setType(config.solver.preconditioner)
+            ksp.setUp() """
 
     if MPI.COMM_WORLD.rank == 0:
         print(f"\n--- Solving with {config.solver.solver_type.upper()} "
@@ -81,7 +96,7 @@ def solve_problem(config: HelmholtzConfig):
     M = fem.form(ufl.inner(error, error) * dx)
     error_L2 = np.sqrt(MPI.COMM_WORLD.allreduce(fem.assemble_scalar(M), op=MPI.SUM))
 
-    if MPI.COMM_WORLD.rank == 0:
-        print(f"L2 error: {error_L2:.5e}")
+    #if MPI.COMM_WORLD.rank == 0:
+    print(f"L2 error: {error_L2:.5e}")
 
     return uh, u_exact, error_L2

@@ -13,12 +13,12 @@ def main():
     #---Domain/Mesh config---
     cfg.mesh.shape = "rectangle"
     #cfg.mesh.shape = "octagon"
-    cfg.mesh.L1 = 2.0
-    cfg.mesh.L2 = 0.05
+    cfg.mesh.L1 = 1.0
+    cfg.mesh.L2 = 0.005
     cfg.mesh.L3 = 1.0
-    cfg.mesh.mesh_size = 0.015
+    cfg.mesh.mesh_size = 0.01
     #---Physical parameters config--- (cf DOI 10.1137/080737538)
-    cfg.physics.k = 10.0
+    cfg.physics.k = 0.1
     cfg.physics.degree = 2
     cfg.physics.penalty_gamma_0 = 100.0
     cfg.physics.penalty_i_gamma_1 = complex(-0.07, 0.01)
@@ -29,7 +29,7 @@ def main():
     cfg.solver.solver_type = "gmres" #"direct" #"gmres"
     cfg.solver.preconditioner = "custom_asm"  # 'ilu', 'jacobi', or 'none' "custom_asm"
 
-    cfg.reference.exact_solution_type = "StandingWave"
+    cfg.reference.exact_solution_type = "PlaneWave"
 
     # --- Solve ---
     uh, u_exact, error_L2 = solve_problem(cfg)
@@ -43,7 +43,7 @@ def main():
     save_error_to_xdmf(uh, u_exact, domain, "helmholtz_error")
 
     # 2. Animated DG Export
-    export_animation(uh, domain, cfg.physics.k, "wave_animation.bp")
+    #export_animation(uh, domain, cfg.physics.k, "wave_animation.bp")
 
 if __name__ == "__main__":
     main()
