@@ -16,20 +16,20 @@ def main():
     cfg.mesh.L1 = 1.0
     cfg.mesh.L2 = 0.005
     cfg.mesh.L3 = 1.0
-    cfg.mesh.mesh_size = 0.01
+    cfg.mesh.mesh_size = 0.005
     #---Physical parameters config--- (cf DOI 10.1137/080737538)
-    cfg.physics.k = 0.1
+    cfg.physics.k = 200
     cfg.physics.degree = 2
-    cfg.physics.penalty_gamma_0 = 100.0
+    cfg.physics.penalty_gamma_0 = 10
     cfg.physics.penalty_i_gamma_1 = complex(-0.07, 0.01)
-    cfg.physics.penalty_beta_1 = 20.0
+    cfg.physics.penalty_beta_1 = 1
     cfg.physics.penalty_sigma = 1.0
 
     #---Solver config---
     cfg.solver.solver_type = "gmres" #"direct" #"gmres"
     cfg.solver.preconditioner = "custom_asm"  # 'ilu', 'jacobi', or 'none' "custom_asm"
 
-    cfg.reference.exact_solution_type = "PlaneWave"
+    cfg.reference.exact_solution_type = "PlaneWave" 
 
     # --- Solve ---
     uh, u_exact, error_L2 = solve_problem(cfg)

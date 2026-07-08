@@ -54,7 +54,7 @@ def build_problem(domain, config: HelmholtzConfig, facet_tags):
     elif config.reference.exact_solution_type == "PlaneWave":
         # Define the wave angle (e.g., 45 degrees)
         theta = np.pi / 4.0
-        f = fem.Constant(domain, PETSc.ScalarType(0.0))
+        f = fem.Constant(domain, PETSc.ScalarType(1.0))
         # 1. Exact mathematical formulation for UFL boundary integrals
         x_ufl = ufl.SpatialCoordinate(domain)
         u_sym = ufl.exp(1j * k * (ufl.cos(theta) * x_ufl[0] + ufl.sin(theta) * x_ufl[1]))
@@ -82,7 +82,7 @@ def build_problem(domain, config: HelmholtzConfig, facet_tags):
            - sigma * ufl.inner(ufl.jump(u), ufl.avg(ufl.dot(ufl.grad(v), n))) * ufl.dS)
 
     # J_0
-    a_h += 1j * (gamma_0 / h_avg) * ufl.inner(ufl.jump(u), ufl.jump(v)) * ufl.dS
+    a_h += (gamma_0 / h_avg) * ufl.inner(ufl.jump(u), ufl.jump(v)) * ufl.dS
    
     # J_1
     du_dn = ufl.dot(ufl.grad(u), n)
@@ -94,7 +94,7 @@ def build_problem(domain, config: HelmholtzConfig, facet_tags):
     tang_u = ufl.grad(u) - du_dn * n
     tang_v = ufl.grad(v) - dv_dn * n
     
-    a_h += 1j * (beta_1 / h_avg) * ufl.inner(ufl.jump(tang_u), ufl.jump(tang_v)) * ufl.dS 
+    a_h += (beta_1 / h_avg) * ufl.inner(ufl.jump(tang_u), ufl.jump(tang_v)) * ufl.dS 
 
 
     # Helmholtz volume term
@@ -119,15 +119,15 @@ def build_problem(domain, config: HelmholtzConfig, facet_tags):
 
         #Robin
 
-        """ a += (- ufl.inner(du_dn, v) - ufl.inner(u, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u, v)) * ufl.ds
-        L += (- ufl.inner(u_exact, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u_exact, v)) * ufl.ds  """
+        # a += (- ufl.inner(du_dn, v) - ufl.inner(u, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u, v)) * ufl.ds
+        # L += (- ufl.inner(u_exact, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u_exact, v)) * ufl.ds
 
     else :
         a += (- ufl.inner(du_dn, v) - ufl.inner(u, dv_dn) + 1j * (gamma_0_bnd / h) * ufl.inner(u, v)) * ufl.ds
         L += (- ufl.inner(u_exact, dv_dn) + 1j * (gamma_0_bnd / h) * ufl.inner(u_exact, v)) * ufl.ds
 
         #Robin
-        """ a += (- ufl.inner(du_dn, v) - ufl.inner(u, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u, v)) * ufl.ds
-        L += (- ufl.inner(u_exact, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u_exact, v)) * ufl.ds """
+        # a += (- ufl.inner(du_dn, v) - ufl.inner(u, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u, v)) * ufl.ds
+        # L += (- ufl.inner(u_exact, dv_dn) + (1j*k + gamma_0_bnd/h) * ufl.inner(u_exact, v)) * ufl.ds
 
     return V, u, v, a, L, u_exact

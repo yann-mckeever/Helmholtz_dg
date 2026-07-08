@@ -11,6 +11,7 @@ from .problem import build_problem
 from petsc4py import PETSc
 from .ddm import build_subdomains
 from .preconditioner import AdditiveSchwarzPC
+from .preconditioner import TwoLevelASM
 
 def solve_problem(config: HelmholtzConfig):
     """
@@ -50,34 +51,52 @@ def solve_problem(config: HelmholtzConfig):
 
     elif config.solver.solver_type == "gmres":
         ksp.setType("gmres")
-        ksp.setTolerances(rtol=1e-12, atol=1e-14, max_it=1000)  # Plus strict 
+        ksp.setTolerances(rtol=1e-8, atol=1e-14, max_it=500)  # Plus strict 
         ksp.setMonitor(lambda ksp, its, rnorm: print(f"GMRES: it={its}, residual={rnorm:.2e}"))  # Suivi en temps réel
+        ksp.setGMRESRestart(100)
         pc = ksp.getPC()
 
         if config.solver.preconditioner == "custom_asm":
             pc.setType(PETSc.PC.Type.PYTHON)
-            subdomains = build_subdomains(V, domain, config)
+            # pc.setType(PETSc.PC.Type.ASM)
+            # pc.setASMType(PETSc.PC.ASMType.RESTRICT)   # RAS — usually better than pure additive
+            # pc.setGASMOverlap(2)                        # overlap layers
+            # sub_ksps = pc.getASMSubKSP()
+            # for sk in sub_ksps:
+            #     sk.setType("preonly")
+            #     sk.getPC().setType("lu")
+            #     sk.getPC().setFactorSolverType("mumps")
+            subdomains = build_subdomains(V, domain, config, n_subdomains=8)
             custom_pc = AdditiveSchwarzPC(V, subdomains, A)
+            # custom_pc = TwoLevelASM(V, subdomains, A)
             pc.setPythonContext(custom_pc)
         else:
             pc.setType(config.solver.preconditioner) 
-            
         ksp.setUp()
         
        
 
-        """ if config.solver.preconditioner == "custom_asm":
-            pc.setType(PETSc.PC.Type.ASM)
-            pc.setASMOverlap(1) 
-            ksp.setUp()
-            sub_ksps = pc.getASMSubKSP()
-            for sub_ksp in sub_ksps:
-                sub_ksp.setType("preonly")
-                sub_pc = sub_ksp.getPC()
-                sub_pc.setType("lu")
-        else:
-            pc.setType(config.solver.preconditioner)
-            ksp.setUp() """
+        # if config.solver.preconditioner == "custom_asm":
+        #     pc.setType(PETSc.PC.Type.ASM)
+        #
+        #     coarse_ksp = pc.getASMCoarseKSP()  # ← Cela active automatiquement le coarse operator
+        #
+        #     # Configure le solveur grossier
+        #     coarse_ksp.setType("preonly")
+        #     coarse_pc = coarse_ksp.getPC()
+        #     coarse_pc.setType("lu")
+        #     coarse_pc.setFactorSolverType("mumps")
+        #
+        #     # Configure les sous-solveurs fins
+        #     sub_ksps = pc.getASMSubKSP()
+        #     for sub_ksp in sub_ksps:
+        #         sub_ksp.setType("preonly")
+        #         sub_pc = sub_ksp.getPC()
+        #         sub_pc.setType("lu")
+        #         sub_pc.setFactorSolverType("mumps")
+        # else:
+        #     pc.setType(config.solver.preconditioner)
+        # ksp.setUp()
 
     if MPI.COMM_WORLD.rank == 0:
         print(f"\n--- Solving with {config.solver.solver_type.upper()} "
@@ -99,4 +118,5 @@ def solve_problem(config: HelmholtzConfig):
     #if MPI.COMM_WORLD.rank == 0:
     print(f"L2 error: {error_L2:.5e}")
 
+    print("Converged reason:", ksp.getConvergedReason(), "iterations:", ksp.getIterationNumber())
     return uh, u_exact, error_L2
